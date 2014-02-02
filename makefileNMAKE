@@ -1,0 +1,23 @@
+#define macros
+EXECUTABLE_NAME = simpleCalc.exe
+DIR_SRC = . 
+DIR_BIN = .
+DIR_BIN_X86 = $(DIR_BIN)\x86
+SRC_FILES= \
+  $(DIR_SRC)\SimpleCalc.c
+# description block
+$(EXECUTABLE_NAME) : $(SRC_FILES)
+  cl /EHsc /Fe$(DIR_BIN_X86)\$(EXECUTABLE_NAME)  $(SRC_FILES)
+
+
+# build application
+simpleCalc: $(EXECUTABLE_NAME)
+
+# create output directories
+create_dirs:
+ @if not exist $(DIR_BIN_X86) mkdir $(DIR_BIN_X86)
+# delete output directories
+clean:
+# @if exist $(DIR_BIN) rmdir /S /Q $(DIR_BIN)
+# create directories and build application
+all: clean create_dirs simpleCalc
