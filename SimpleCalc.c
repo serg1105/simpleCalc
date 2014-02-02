@@ -5,8 +5,9 @@
 
 int no_of_errors;
 int no_of_strings=0;
-#define MAXLINE 1000 
-char g_inData[MAXLINE]; 
+
+#define MAXLINE 1000 /* max length for input data */
+char g_inData[MAXLINE]; /* storage for input data*/
 
 typedef enum  { FALSE, TRUE } boolean;
 typedef enum _TokenCode
@@ -82,11 +83,14 @@ int g_countMnems = 0;
 
 void AddOperation(const char* mnem,POperationCode code,int priority,int specs,POPERACTION Action)
 {
+	POperation operTableForPriority;
+	int *countOpersForPriority;
+	POperation newOperation;
 	if(priority > _MAX_PRIORITY || priority < 1)
 		return;
-	POperation operTableForPriority = g_Operations[priority-1];
-	int *countOpersForPriority = &g_countOperations[priority-1];
-	POperation newOperation = &operTableForPriority[*countOpersForPriority];
+	operTableForPriority = g_Operations[priority-1];
+	countOpersForPriority = &g_countOperations[priority-1];
+	newOperation = &operTableForPriority[*countOpersForPriority];
 	strcpy(newOperation->mnemonic,mnem);
 	newOperation->priority=priority;
 	newOperation->code = *code;
@@ -282,7 +286,9 @@ double prim(boolean get)
 };
 int countAllTokens();
 
-/* getline:*/
+/* function getline: 
+*	copy stdin data to destStr
+*/
 int getlineEx(char* destStr,int maxLength)
 {
 	int c, i;
@@ -328,6 +334,7 @@ TokenCode get_token()
 int isNumberToken(char** data,PTOKEN token)
 {
 	char ch = **data;
+	int i=0;
 
 	char* temp = *data;
 	if(isdigit(*temp))
@@ -335,7 +342,7 @@ int isNumberToken(char** data,PTOKEN token)
 		char buf[100];
 		token->code = NUMBER;
 		token->valueStr = temp;
-		int i=0;
+		i=0;
 		while(isdigit(*temp)||(*temp=='.'))
 		{	
 			buf[i++] = *temp++;
@@ -352,6 +359,7 @@ int isOperationToken(char** data,PTOKEN token)
 {
 	char ch = **data;
 	int i=0;
+	POperation pOperation;
 	for(i=0;i<countAllMnems();i++)
 	{
 		char* pCurMnem = g_OperationsMnems[i].mnemonic;
@@ -359,7 +367,7 @@ int isOperationToken(char** data,PTOKEN token)
 		if(strncmp(pCurMnem,*data,strlen(pCurMnem))!=0)
 			continue;
 
-		POperation pOperation = g_OperationsMnems[i].pOperation;
+		pOperation = g_OperationsMnems[i].pOperation;
 
 		if(pOperation->specs != NONE)
 		{
@@ -439,7 +447,6 @@ int main(int argc, char* argv[])
 	};
 
 	CalcInit();
-
 	while(g_curToken.code != EXIT)
 	{
 		printf("Enter the expression or type ';' to exit:\n");
@@ -448,11 +455,13 @@ int main(int argc, char* argv[])
 		g_curToken.code = START;
 		while(g_curToken.code != END && g_curToken.code != EXIT)
 		{
+			double result;
+			long res2;
 			get_token();
-			double result = expr(FALSE);
+			result = expr(FALSE);
 			if(g_curToken.code == UNKNOWN)
 				break;
-			long res2 = (long)result;
+			res2 = (long)result;
 
 			if((double)res2 == result)
 				printf("Result: %d\n\n",(long)result);
@@ -462,4 +471,3 @@ int main(int argc, char* argv[])
 	}
 	return no_of_errors;
 };
-
