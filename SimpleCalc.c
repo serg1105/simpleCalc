@@ -1,8 +1,3 @@
-// SimpleCalc.c: определяет точку входа для консольного приложения.
-//
-// simpleCalc.c: определяет точку входа для консольного приложения.
-//
-
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -10,8 +5,8 @@
 
 int no_of_errors;
 int no_of_strings=0;
-#define MAXLINE 1000 /* максимальный размер вводимой строки */
-char g_inData[MAXLINE]; /* текущая строка */
+#define MAXLINE 1000 
+char g_inData[MAXLINE]; 
 
 typedef enum  { FALSE, TRUE } boolean;
 typedef enum _TokenCode
@@ -287,7 +282,7 @@ double prim(boolean get)
 };
 int countAllTokens();
 
-/* getline: специализированная версия */
+/* getline:*/
 int getlineEx(char* destStr,int maxLength)
 {
 	int c, i;
@@ -444,7 +439,7 @@ int main(int argc, char* argv[])
 	};
 
 	CalcInit();
-//	printf("Enter the expression or type ';' to exit:\n");
+
 	while(g_curToken.code != EXIT)
 	{
 		printf("Enter the expression or type ';' to exit:\n");
