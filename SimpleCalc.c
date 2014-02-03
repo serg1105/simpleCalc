@@ -3,6 +3,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#define IN
+#define OUT
+
 int no_of_errors;
 int no_of_strings=0;
 
@@ -58,7 +61,19 @@ typedef struct tagToken {
 
 typedef int (*PISTOKEN)(char** inData,PTOKEN token);
 
-TOKEN g_curToken = {START,0x0};
+TOKEN g_curToken = {START,0x0};// global variable for current token
+
+int isNumberToken(char** inData,PTOKEN token);
+int isOperationToken(char** inData,PTOKEN token);
+int isExitToken(char** inData,PTOKEN token);
+int isEndToken(char** inData,PTOKEN token);
+
+TOKEN g_TokensTable[] = { {NUMBER,0x0,0.0,0x0,0,isNumberToken},
+							{OPERATION,0x0,0.0,0x0,0,isOperationToken},
+							{EXIT,0x0,0.0,0x0,0,isExitToken},
+							{END,0x0,0.0,0x0,0,isEndToken}
+};
+
 
 
 #define _MAX_OPERATIONS 50
@@ -81,7 +96,7 @@ typedef struct tagMnemonic
 MNEMONIC g_OperationsMnems[_MAX_OPERATIONS*_MAX_PRIORITY];
 int g_countMnems = 0;
 
-void AddOperation(const char* mnem,POperationCode code,int priority,int specs,POPERACTION Action)
+void AddOperation(IN const char* mnem,IN const POperationCode code,IN int priority,IN int specs,IN const POPERACTION Action)
 {
 	POperation operTableForPriority;
 	int *countOpersForPriority;
@@ -132,23 +147,23 @@ void CalcInit()
 	AddOperation("-",&opCode,3,NO_SPECS,UMINUS);
 }
 
-int isNumberToken(char** inData,PTOKEN token);
-int isOperationToken(char** inData,PTOKEN token);
-int isExitToken(char** inData,PTOKEN token);
-int isEndToken(char** inData,PTOKEN token);
-
-TOKEN g_TokensTable[] = { {NUMBER,0x0,0.0,0x0,0,isNumberToken},
-							{OPERATION,0x0,0.0,0x0,0,isOperationToken},
-							{EXIT,0x0,0.0,0x0,0,isExitToken},
-							{END,0x0,0.0,0x0,0,isEndToken}
-};
 
 
-double expr(boolean get,int priority);
+/*
+*/
+
+double expr(IN boolean get,IN int priority);
 int error(const char* s);
 TokenCode get_token();
 
-double expr(boolean get,int priority)
+/*
+*	function expr:
+*		calculate expression.
+*		It's recursive function.
+*		The depth depends on the priority of the operation.
+*/
+
+double expr(IN boolean get,IN int priority)
 {
 	double left = 1;
 	if(priority<1 || priority > _MAX_PRIORITY)
@@ -210,6 +225,9 @@ double expr(boolean get,int priority)
 	};
 };
 
+/*
+*	Functions implementing opretions
+*/
 
 double PLUS(double arg1)
 {
@@ -237,6 +255,11 @@ double MUL(double arg1)
 	arg1*=expr(TRUE,2);
 	return arg1;
 }
+/*
+*	function LP:
+*		implementation of operation '(expr)'
+*/
+
 double LP(double arg1)
 {
 	double e=expr(TRUE,1);
@@ -251,20 +274,37 @@ double LP(double arg1)
 	g_curToken.code = UNKNOWN;
 	return error(") EXPECTED");
 }
+/*
+*	function RP:
+*		stub for operation ')'. Never called.
+*/
 double RP(double arg1)
 {
 	return 1;
 }
+
+/*
+*	function UMINUS:
+*		implementation of operation unary minus
+*/
 
 double UMINUS(double arg1)
 {
 	return -expr(TRUE,3);
 }
 
+/*
+*/
 
 int countAllTokens();
-
 char* g_curPosInStreamData = 0x0; // pointer on current data to parse
+
+/*
+*	function get_token:
+*		parse input data in current position
+*		and set up current token
+*/
+
 TokenCode get_token()
 {
 	int countTokens = countAllTokens();
@@ -294,11 +334,9 @@ TokenCode get_token()
 	return UNKNOWN;
 };
 
-int isNumberToken(char** data,PTOKEN token)
+int isNumberToken(IN OUT char** data,IN OUT PTOKEN token)
 {
-	char ch = **data;
 	int i=0;
-
 	char* temp = *data;
 	if(isdigit(*temp))
 	{
@@ -318,9 +356,8 @@ int isNumberToken(char** data,PTOKEN token)
 
 	return 0;
 }
-int isOperationToken(char** data,PTOKEN token)
+int isOperationToken(IN OUT char** data,IN OUT PTOKEN token)
 {
-	char ch = **data;
 	int i=0;
 	POperation pOperation;
 	for(i=0;i<countAllMnems();i++)
@@ -351,10 +388,9 @@ int isOperationToken(char** data,PTOKEN token)
 
 	return 0;
 }
-int isEndToken(char** data,PTOKEN token)
+int isEndToken(IN OUT char** data,IN OUT PTOKEN token)
 {
-	char ch = **data;
-	switch(ch)
+	switch(**data)
 	{
 		case 0	:
 		case '\n'	:
@@ -367,10 +403,9 @@ int isEndToken(char** data,PTOKEN token)
 
 	return 0;
 }
-int isExitToken(char** data,PTOKEN token)
+int isExitToken(IN OUT char** data,IN OUT PTOKEN token)
 {
-	char ch = **data;
-	switch(ch)
+	switch(**data)
 	{
 		case ';'	:
 			{
@@ -383,26 +418,24 @@ int isExitToken(char** data,PTOKEN token)
 	return 0;
 }
 
-int error(const char* s)
-{
-	no_of_errors++;
-	fprintf(stderr, "ERROR: %s\n\n",s);
-	return 1;
-};
-
 int countAllTokens()
 {
 	return sizeof(g_TokensTable)/sizeof(TOKEN);
 }
 
-
+/*
+*/
 int getlineEx(char* desStr,int maxLength);
 int main(int argc, char* argv[])
 {
 	CalcInit();
+	printf("Simple Calculator [Version 0.1]  (c) Sergey Petukhov. 2014. All rights reserved.\n");
+	printf("Calculator is created for the following  calculations: '+' '-' '*' '/' .\n");
+	printf("You can also use brackets '()' for complex expressions.  Ex: 5+4*(3-8).\n");
+	printf("To calculate the result, press Enter.\n");
 	while(g_curToken.code != EXIT)
 	{
-		printf("Enter the expression or type ';' to exit:\n");
+		printf("\nEnter the expression or type ';' to exit:\n\n");
 		getlineEx(g_inData,MAXLINE);
 		g_curPosInStreamData = g_inData;
 		g_curToken.code = START;
@@ -417,9 +450,9 @@ int main(int argc, char* argv[])
 			res2 = (long)result;
 
 			if((double)res2 == result)
-				printf("Result: %d\n\n",(long)result);
+				printf("Result: %li\n",(long)result);
 			else
-				printf("Result: %f\n\n",result);
+				printf("Result: %f\n",result);
 		};
 	}
 	return no_of_errors;
@@ -439,3 +472,9 @@ int getlineEx(char* destStr,int maxLength)
 	destStr[i] = '\0';
 	return i;
 }
+int error(const char* s)
+{
+	no_of_errors++;
+	fprintf(stderr, "ERROR: %s\n\n",s);
+	return 1;
+};
