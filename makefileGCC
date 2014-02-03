@@ -1,0 +1,44 @@
+#  ====================== Documentation for  CFLAGS =================================
+#  -c
+#  http://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html#Overall-Options            
+
+#  -Wall; -Wtype-limits
+#  http://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+
+CC=gcc
+
+#============ version check ===========================================
+empty:=
+space:= $(empty) $(empty)
+GCCVERSIONSTRING := $(shell expr `$(CC) -dumpversion`)
+#Create version number without "."
+GCCVERSION := $(shell expr `echo $(GCCVERSIONSTRING)` | cut -f1 -d.)
+GCCVERSION += $(shell expr `echo $(GCCVERSIONSTRING)` | cut -f2 -d.)
+GCCVERSION += $(shell expr `echo $(GCCVERSIONSTRING)` | cut -f3 -d.)
+# Make sure the version number has at least 3 decimals
+GCCVERSION += 00
+# Remove spaces from the version number
+GCCVERSION := $(subst $(space),$(empty),$(GCCVERSION))
+# Crop the version number to 3 decimals.
+GCCVERSION := $(shell expr `echo $(GCCVERSION)` | cut -b1-3)
+#$(warning $(GCCVERSION))
+
+NEED_UNUSED_BUT_SET := $(shell expr `echo $(GCCVERSION)` \>= 470) # COMPILER VERSION
+
+ifeq "$(NEED_UNUSED_BUT_SET)" "1"
+    
+	CFLAGS=-c -Wall -Wtype-limits
+
+	SimpleCalc: SimpleCalc.o
+		$(CC) SimpleCalc.o -o SimpleCalc
+
+
+	SimpleCalc.o: SimpleCalc.c
+		$(CC) $(CFLAGS) SimpleCalc.c 
+else
+$(info ************ Check the version of your compiler. Required version 4.7.0 ************)
+ 
+endif
+	
+clean:
+	rm -rf *.o 
