@@ -144,22 +144,45 @@ TOKEN g_TokensTable[] = { {NUMBER,0x0,0.0,0x0,0,isNumberToken},
 };
 
 
-double term(boolean get);
-double prim(boolean get);
-double expr(boolean get);
+double expr(boolean get,int priority);
 int error(const char* s);
 TokenCode get_token();
 
-double expr(boolean get)
+double expr(boolean get,int priority)
 {
-	double left=term(get);
+	double left = 1;
+	if(priority<1 || priority > _MAX_PRIORITY)
+	{
+		g_curToken.code = UNKNOWN;
+		return error("PRIORITY INVALID");
+	}
+	if(priority == _MAX_PRIORITY)
+		{
+			if(get)
+				if(get_token() == UNKNOWN)
+					return error("INCORRECT EXPRESSION");
+		}
+	else
+		left=expr(get,priority+1);
 	for(;;)
 	{
 		switch(g_curToken.code)
 		{
+			case NUMBER	:
+			{
+				double v=g_curToken.value;
+				if(get_token() == UNKNOWN)
+				{
+					return error("INCORRECT EXPRESSION");
+				}
+				return v;
+			};
+			case UNKNOWN	:
+			case EXIT	:
+				return 1;
 			case OPERATION	:
 				{
-					if(g_curToken.priority == 1)
+					if(g_curToken.priority == priority)
 					{
 
 						int countOpers = 0;
@@ -170,26 +193,37 @@ double expr(boolean get)
 					}
 					else 
 						return left;
+					if(priority == _MAX_PRIORITY)
+						return left;
 					break;
 				}
-			default		:	return left;
+			default		:
+				{
+					if(priority == _MAX_PRIORITY)
+					{
+						g_curToken.code = UNKNOWN;
+						return error("INCORRECT EXPRESSION");
+					}
+					return left;
+				}
 		};
 	};
 };
 
+
 double PLUS(double arg1)
 {
-	arg1+=term(TRUE);
+	arg1+=expr(TRUE,2);
 	return arg1;
 }
 double MINUS(double arg1)
 {
-	arg1-=term(TRUE);
+	arg1-=expr(TRUE,2);
 	return arg1;
 }
 double DIV(double arg1)
 {
-	double d=prim(TRUE);
+	double d=expr(TRUE,3);
 	if(d != 0.0)
 	{
 		arg1/=d;
@@ -200,12 +234,12 @@ double DIV(double arg1)
 }
 double MUL(double arg1)
 {
-	arg1*=term(TRUE);
+	arg1*=expr(TRUE,2);
 	return arg1;
 }
 double LP(double arg1)
 {
-	double e=expr(TRUE);
+	double e=expr(TRUE,1);
 	if(g_curToken.code == UNKNOWN)
 		return 1;
 
@@ -224,84 +258,13 @@ double RP(double arg1)
 
 double UMINUS(double arg1)
 {
-	return -prim(TRUE);
+	return -expr(TRUE,3);
 }
 
 
-double term(boolean get)
-{
-	double left=prim(get);
-	for(;;)
-	{
-		switch(g_curToken.code)
-		{
-			case OPERATION	:
-					if(g_curToken.priority == 2)
-					{
-
-						int countOpers = 0;
-						POperation pOperation = g_curToken.pOperation;
-						
-						left =  pOperation->Action(left);
-
-					}
-					else
-						return left;
-					break;
-			default		:	return left;
-		};
-	};
-};
-
-double prim(boolean get)
-{
-	if(get)get_token();
-	switch(g_curToken.code)
-	{
-		case NUMBER	:
-		{
-			double v=g_curToken.value;
-			get_token();
-			return v;
-		};
-		case OPERATION	:
-			{
-				if(g_curToken.priority == 3)
-				{
-
-					int countOpers = 0;
-					POperation pOperation = g_curToken.pOperation;
-						
-					return pOperation->Action(1);
-
-				}
-				break;
-			}
-		case EXIT	:
-			return 1;
-
-	};
-	g_curToken.code = UNKNOWN;
-	return error("INCORRECT EXPRESSION");
-};
 int countAllTokens();
 
-/* function getline: 
-*	copy stdin data to destStr
-*/
-int getlineEx(char* destStr,int maxLength)
-{
-	int c, i;
-	for (i=0; i < maxLength-1 && (c=getchar()) != EOF && c != '\n'; ++i)
-	destStr[i] = c;
-	if(c == '\n') {
-		destStr[i]= c;
-		++i;
-	}
-	destStr[i] = '\0';
-	return i;
-}
-char* g_curPosInStreamData = 0x0;
+char* g_curPosInStreamData = 0x0; // pointer on current data to parse
 TokenCode get_token()
 {
 	int countTokens = countAllTokens();
@@ -431,21 +394,11 @@ int countAllTokens()
 {
 	return sizeof(g_TokensTable)/sizeof(TOKEN);
 }
+
+
+int getlineEx(char* desStr,int maxLength);
 int main(int argc, char* argv[])
 {
-	switch(argc)
-	{
-		case 1:
-//			input=&cin;
-			break;
-		case 2:
-//			input=new istringstream(argv[1]);
-			break;
-		default:
-			error("To mach parameters!!!");
-			return 1;
-	};
-
 	CalcInit();
 	while(g_curToken.code != EXIT)
 	{
@@ -458,8 +411,8 @@ int main(int argc, char* argv[])
 			double result;
 			long res2;
 			get_token();
-			result = expr(FALSE);
-			if(g_curToken.code == UNKNOWN)
+			result = expr(FALSE,1);
+			if(g_curToken.code == UNKNOWN || g_curToken.code == EXIT)
 				break;
 			res2 = (long)result;
 
@@ -470,4 +423,19 @@ int main(int argc, char* argv[])
 		};
 	}
 	return no_of_errors;
-};
+}; 
+/* function getline: 
+*	copy stdin data to destStr
+*/
+int getlineEx(char* destStr,int maxLength)
+{
+	int c, i;
+	for (i=0; i < maxLength-1 && (c=getchar()) != EOF && c != '\n'; ++i)
+	destStr[i] = c;
+	if(c == '\n') {
+		destStr[i]= c;
+		++i;
+	}
+	destStr[i] = '\0';
+	return i;
+}
